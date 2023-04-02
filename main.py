@@ -82,36 +82,46 @@ async def _run_feed(series: SeriesSeason, qbt: EuphieClient):
 
 
 def get_day_difference(week_air: int, week_ctime: int) -> int:
-    sign = 1 if week_air > week_ctime else -1
-    return (((week_air - week_ctime) * sign + 7) % 7) * sign
+    return (week_air - week_ctime + 7) % 7
 
 
 def should_check(series: SeriesSeason) -> bool:
     current_time = pendulum.now(tz="Asia/Tokyo")
-    if isinstance(series.airtime, date):
+    if isinstance(series.airtime, datetime):
+        current_time = pendulum.now(tz=series.airtime.tzinfo or current_time.tzinfo or "Asia/Tokyo")  # type: ignore
+        time_diff = get_day_difference(series.airtime.weekday(), current_time.weekday())
+        print(time_diff)
+        if time_diff > 0:
+            current_time = current_time.add(days=time_diff)
+        elif time_diff < 0:
+            current_time = current_time.subtract(days=time_diff)
+        airtime = pendulum.datetime(
+            year=series.airtime.year,
+            month=series.airtime.month,
+            day=current_time.day,
+            hour=series.airtime.hour,
+            minute=series.airtime.minute,
+            tz=series.airtime.tzinfo or current_time.tzinfo or "Asia/Tokyo",  # type: ignore
+        )
+        logger.info("Next airtime for %s: %s", series.id, airtime.to_day_datetime_string())
+        diff_back = airtime.subtract(hours=2)
+        diff_future = airtime.add(hours=2)
+        return diff_back <= current_time <= diff_future
+    elif isinstance(series.airtime, date):
         # Airtime is a date of the original airing, so we need to convert it to a datetime
         # with the correct day that it's in the week.
         ctime_day = current_time.day + get_day_difference(series.airtime.weekday(), current_time.weekday())
+        if time_diff > 0:
+            current_time = current_time.add(days=time_diff)
+        elif time_diff < 0:
+            current_time = current_time.subtract(days=time_diff)
         airtime = pendulum.datetime(
             year=series.airtime.year, month=series.airtime.month, day=ctime_day, tz="Asia/Tokyo"
         )
         yesterday = airtime.subtract(hours=2)
         tomorrow = airtime.add(hours=2)
+        logger.info("Next airtime for %s: %s", series.id, airtime.to_day_datetime_string())
         return yesterday <= current_time <= tomorrow
-    elif isinstance(series.airtime, datetime):
-        current_time = pendulum.now(tz=series.airtime.tzinfo or current_time.tzinfo)
-        ctime_day = current_time.day + get_day_difference(series.airtime.weekday(), current_time.weekday())
-        airtime = pendulum.datetime(
-            year=series.airtime.year,
-            month=series.airtime.month,
-            day=ctime_day,
-            hour=series.airtime.hour,
-            minute=series.airtime.minute,
-            tz=series.airtime.tzinfo or current_time.tzinfo,
-        )
-        diff_back = airtime.subtract(hours=2)
-        diff_future = airtime.add(hours=2)
-        return diff_back <= current_time <= diff_future
     return True
 
 
@@ -136,7 +146,7 @@ async def run_once():
 
     # Chunk series, so we don't overload Nyaa RSS and got banned.
     chunk_size = 3
-    chunk_series = [configure_series for i in range(0, len(configure_series), chunk_size)]
+    chunk_series = [configure_series[i : i + chunk_size] for i in range(0, len(configure_series), chunk_size)]
 
     for idx, chunk in enumerate(chunk_series, 1):
         logger.info(
@@ -154,7 +164,7 @@ async def run_once():
 
 
 if __name__ == "__main__":
-    logger.info("Starting ArcNCiel/EuphieRR v0.3.0...")
+    logger.info("Starting ArcNCiel/EuphieRR v0.3.1...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 

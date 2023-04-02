@@ -217,6 +217,7 @@ def write_config(config_path: Path, config: ArcNCielConfig):
                 "target_name": feed.target_name,
                 "season": feed.season,
                 "matches": feed.matches,
+                "airtime": feed.airtime,
             }
             for feed in config.series
         ],
