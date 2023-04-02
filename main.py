@@ -58,6 +58,8 @@ async def _run_feed(series: SeriesSeason, qbt: EuphieClient):
     for feed in series_feeds:
         if feed.episode not in downloaded_episodes.get(str(feed.season or series.season), []):
             to_be_downloaded.append(feed)
+            continue
+        logger.warning(f"Episode S{feed.actual_season:02d}E{feed.episode:02d} already downloaded, skipping...")
 
     if not to_be_downloaded:
         logger.info("No new episodes for %s", series.id)
@@ -168,7 +170,7 @@ async def run_once():
 
 
 if __name__ == "__main__":
-    logger.info("Starting ArcNCiel/EuphieRR v0.3.7...")
+    logger.info("Starting ArcNCiel/EuphieRR v0.3.8...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 

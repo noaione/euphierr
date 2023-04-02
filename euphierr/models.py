@@ -138,14 +138,17 @@ class ArcNCielTorrent:
     def to_data_content(self, extension: str):
         if extension.endswith("."):
             extension = extension[:-1]
-        season = self.season or self.series.season
         filename_fmt = self.series.target_name.format(
-            season=season,
+            season=self.actual_season,
             episode=self.episode,
         )
-        filepath = Path(self.series.target_dir) / f"Season {season:02d}" / f"{filename_fmt}.{extension}"
+        filepath = Path(self.series.target_dir) / f"Season {self.actual_season:02d}" / f"{filename_fmt}.{extension}"
         return ArcNCielDataContent(
             episode=self.episode,
-            season=season,
+            season=self.actual_season,
             path=str(filepath),
         )
+
+    @property
+    def actual_season(self):
+        return self.season or self.series.season
