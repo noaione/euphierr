@@ -94,9 +94,11 @@ def should_check(series: SeriesSeason) -> bool:
             current_time = pendulum.now(tz=timezone)  # type: ignore
         time_diff = get_day_difference(series.airtime.weekday(), current_time.weekday())
         if time_diff > 0:
-            current_time = current_time.add(days=time_diff)
+            cday_time = current_time.add(days=time_diff)
         elif time_diff < 0:
-            current_time = current_time.subtract(days=time_diff)
+            cday_time = current_time.subtract(days=time_diff)
+        else:
+            cday_time = current_time
         hours = 0
         minutes = 0
         seconds = 0
@@ -106,8 +108,8 @@ def should_check(series: SeriesSeason) -> bool:
             seconds = series.airtime.second
         airtime = pendulum.datetime(
             year=series.airtime.year,
-            month=series.airtime.month,
-            day=current_time.day,
+            month=cday_time.month,
+            day=cday_time.day,
             hour=hours,
             minute=minutes,
             second=seconds,
@@ -159,7 +161,7 @@ async def run_once():
 
 
 if __name__ == "__main__":
-    logger.info("Starting ArcNCiel/EuphieRR v0.3.2...")
+    logger.info("Starting ArcNCiel/EuphieRR v0.3.3...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 
