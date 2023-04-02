@@ -1,7 +1,7 @@
 import asyncio
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple
 
 import pendulum
 from aiopath import AsyncPath
@@ -33,18 +33,18 @@ async def _wrapped_downloader_and_move(torrent: ArcNCielTorrent, qbt: EuphieClie
     try:
         torrent, save_dir = await qbt.add_and_wait(torrent)
         source_save = AsyncPath(save_dir)
-        target_save = AsyncPath(torrent.to_data_content().path)
+        target_save = AsyncPath(torrent.to_data_content(source_save.suffix).path)
         await target_save.parent.mkdir(parents=True, exist_ok=True)
         logger.info("Moving %s to %s", torrent.name, target_save)
         await source_save.rename(target_save)
         logger.info("Successfully processed %s", torrent.name)
-        return torrent, True
+        return torrent, source_save, True
     except ArcNCielInvalidTorrentError as te:
         logger.error("Failed to download %s", str(te))
-        return torrent, False
+        return torrent, None, False
     except Exception as e:
         logger.exception("An unknown error has occured!", exc_info=e)
-        return torrent, False
+        return torrent, None, False
 
 
 async def _run_feed(series: SeriesSeason, qbt: EuphieClient):
@@ -64,19 +64,19 @@ async def _run_feed(series: SeriesSeason, qbt: EuphieClient):
         return
 
     logger.info("Found %d new episodes for %s, creating tasks...", len(to_be_downloaded), series.id)
-    tasks: List[asyncio.Task[Tuple[ArcNCielTorrent, bool]]] = []
+    tasks: List[asyncio.Task[Tuple[ArcNCielTorrent, Optional[AsyncPath], bool]]] = []
     for feed in to_be_downloaded:
         task_name = f"FEED_{series.id}_{feed.hash}_{current_time}"
         task = asyncio.create_task(_wrapped_downloader_and_move(feed, qbt), name=task_name)
         tasks.append(task)
         _GLOBAL_TASKS.append(task)
     logger.info("Running %d feed tasks for series %s...", len(tasks), series.id)
-    results: List[Tuple[ArcNCielTorrent, bool]] = await asyncio.gather(*tasks)
+    results: List[Tuple[ArcNCielTorrent, Optional[AsyncPath], bool]] = await asyncio.gather(*tasks)
 
     arcnseries = await get_arcnciel_data(series)
-    for tor, res in results:
-        if res:
-            arcnseries.contents.append(tor.to_data_content())
+    for tor, svpath, res in results:
+        if res and svpath is not None:
+            arcnseries.contents.append(tor.to_data_content(svpath.suffix))
     logger.info("Saving data for %s", series.id)
     await save_arcnciel_data(arcnseries)
 
@@ -168,7 +168,7 @@ async def run_once():
 
 
 if __name__ == "__main__":
-    logger.info("Starting ArcNCiel/EuphieRR v0.3.6...")
+    logger.info("Starting ArcNCiel/EuphieRR v0.3.7...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 
