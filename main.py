@@ -154,10 +154,10 @@ async def run_once():
 
     for idx, chunk in enumerate(chunk_series, 1):
         logger.info(
-            "Processing chunk %d/%d (%d series out of %d)", idx, len(chunk_series), len(chunk), len(config.series)
+            "Processing chunk %d/%d (%d series out of %d)", idx, len(chunk_series), len(chunk), len(chunk_series)
         )
         tasks: List[asyncio.Task[None]] = []
-        for series in config.series:
+        for series in chunk:
             task_name = f"SERIES_CHUNK_{idx}_{series.id}_{current_time}"
             task = asyncio.create_task(_run_feed(series, euphie_qbt), name=task_name)
             tasks.append(task)
@@ -168,7 +168,7 @@ async def run_once():
 
 
 if __name__ == "__main__":
-    logger.info("Starting ArcNCiel/EuphieRR v0.3.3...")
+    logger.info("Starting ArcNCiel/EuphieRR v0.3.4...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 
