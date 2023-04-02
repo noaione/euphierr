@@ -1,0 +1,38 @@
+{
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": [
+        "--config=.flake8"
+    ],
+    "[python]": {
+        "editor.formatOnSave": true,
+    },
+    "python.formatting.provider": "black",
+    "python.formatting.blackArgs": [
+        "--config=pyproject.toml"
+    ],
+    "python.analysis.diagnosticMode": "workspace",
+    "python.linting.enabled": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true,
+    "isort.check": false,
+    "isort.importStrategy": "useBundled",
+    "isort.args": [
+        "--settings-path=pyproject.toml"
+    ],
+    "python.languageServer": "Pylance",
+    "autoDocstring.docstringFormat": "numpy",
+    "tailwindCSS.emmetCompletions": true,
+    "autoDocstring.includeName": true,
+    "autoDocstring.startOnNewLine": true,
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.venv": true,
+        "**/__pycache__": true,
+        "**/node_modules": true,
+    }
+}

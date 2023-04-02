@@ -1,0 +1,10 @@
+.venv/
+venv/
+env/
+.env/
+
+config.yaml
+config.yml
+
+# Data files
+.arcnciel-data/
