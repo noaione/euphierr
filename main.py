@@ -88,20 +88,27 @@ async def run_once():
     current_time = int(datetime.utcnow().timestamp())
     euphie_qbt = EuphieClient(config.qbt)
 
-    tasks: List[asyncio.Task[None]] = []
-    logger.info("Processing %d series", len(config.series))
-    for series in config.series:
-        task_name = f"SERIES_{series.id}_{current_time}"
-        task = asyncio.create_task(_run_feed(series, euphie_qbt), name=task_name)
-        tasks.append(task)
-        _GLOBAL_TASKS.append(task)
-    logger.info("Running %d series tasks...", len(tasks))
-    await asyncio.gather(*tasks)
+    # Chunk series, so we don't overload Nyaa RSS and got banned.
+    chunk_size = 3
+    chunk_series = [config.series[i : i + chunk_size] for i in range(0, len(config.series), chunk_size)]
+
+    for idx, chunk in enumerate(chunk_series, 1):
+        logger.info(
+            "Processing chunk %d/%d (%d series out of %d)", idx, len(chunk_series), len(chunk), len(config.series)
+        )
+        tasks: List[asyncio.Task[None]] = []
+        for series in config.series:
+            task_name = f"SERIES_CHUNK_{idx}_{series.id}_{current_time}"
+            task = asyncio.create_task(_run_feed(series, euphie_qbt), name=task_name)
+            tasks.append(task)
+            _GLOBAL_TASKS.append(task)
+        logger.info("Executing series chunk %d/%d tasks...", idx, len(chunk_series))
+        await asyncio.gather(*tasks)
     logger.info("Run complete")
 
 
 if __name__ == "__main__":
-    logger.info("Starting ArcNCiel/EuphieRR v0.1.2...")
+    logger.info("Starting ArcNCiel/EuphieRR v0.2.0...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 
