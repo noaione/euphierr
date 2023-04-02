@@ -49,10 +49,10 @@ async def get_downloaded_series(series: SeriesSeason):
     series_folder = AsyncPath(series.target_dir)
     episode_mappings: Dict[str, List[int]] = {}
     async for season_dir in series_folder.iterdir():
-        if season_dir.is_dir() and season_dir.name.startswith("Season"):
+        if (await season_dir.is_dir()) and season_dir.name.startswith("Season"):
             season_num = int(season_dir.name.split(" ", 1)[1])
             async for episode in season_dir.iterdir():
-                if not episode.is_file():
+                if not await episode.is_file():
                     continue
                 if (ep_match := EPISODE_RE.match(episode.name)) is None:
                     continue
@@ -101,9 +101,20 @@ async def get_arcnciel_data(series: SeriesSeason):
 
 async def save_arcnciel_data(data: ArcNCielData):
     arcnseries = AsyncPath(ARCNCIEL_PATH / f"{data.id}.yml")
+    as_json_repr = {
+        "id": data.id,
+        "contents": [
+            {
+                "episode": c.episode,
+                "season": c.season,
+                "path": c.path,
+            }
+            for c in data.contents
+        ],
+    }
     bytes_io = BytesIO()
     yaml.safe_dump(
-        data,
+        as_json_repr,
         bytes_io,
         indent=2,
         allow_unicode=True,
