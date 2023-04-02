@@ -68,6 +68,7 @@ series:
     matches:
     - 1080p
     - DSNP
+    airtime: 2023-04-01T22:30:00+09:00
 ```
 
 ### Explanation

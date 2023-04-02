@@ -28,10 +28,11 @@ SOFTWARE.
 import logging
 import re
 import uuid
+from datetime import date, datetime
 from math import inf as Infinity
 from pathlib import Path
 from string import Formatter
-from typing import List, Optional, cast
+from typing import List, Optional, Union, cast
 from urllib.parse import urlparse
 
 import yaml
@@ -50,6 +51,17 @@ def _check_format_string_key(to_parse: str, key: str):
     # note, some key might have a modifier like {key:0>2}
     key_fmt = [tup[1] for tup in Formatter().parse(to_parse) if tup[1] is not None]
     return key in key_fmt
+
+
+def _parse_airtime(airtime: Union[datetime, date]) -> Union[datetime, date, None]:
+    if not isinstance(airtime, (datetime, date)):
+        return None
+    if isinstance(airtime, datetime):
+        # Check if the airtime has timezone info
+        # If it's, assume it's the local timezone
+        if airtime.tzinfo is None:
+            airtime = airtime.replace(tzinfo=datetime.utcnow().astimezone().tzinfo)
+    return airtime
 
 
 def read_config(config_path: Path) -> ArcNCielConfig:
@@ -164,6 +176,9 @@ def read_config(config_path: Path) -> ArcNCielConfig:
         if not isinstance(feed_matches, list):
             logger.error("Invalid matches for feed %s, must be a list!", feed_id)
             raise ArcNCielConfigError(f"series.{idx}.matches", "Invalid matches, must be a list") from None
+        airtime = cast(Optional[Union[datetime, date]], feed.get("airtime"))
+        if airtime is not None:
+            airtime = _parse_airtime(airtime)
         feed_matches = list(map(str, feed_matches))
         parsed_feed = SeriesSeason(
             id=feed_id,
@@ -173,6 +188,7 @@ def read_config(config_path: Path) -> ArcNCielConfig:
             target_name=target_name,
             season=feed_season,
             matches=feed_matches,
+            airtime=airtime,
         )
         parsed_series_feeds.append(parsed_feed)
 

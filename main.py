@@ -1,8 +1,9 @@
 import asyncio
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, List, Tuple
 
+import pendulum
 from aiopath import AsyncPath
 
 from euphierr.config import read_config
@@ -80,6 +81,40 @@ async def _run_feed(series: SeriesSeason, qbt: EuphieClient):
     await save_arcnciel_data(arcnseries)
 
 
+def get_day_difference(week_air: int, week_ctime: int) -> int:
+    sign = 1 if week_air > week_ctime else -1
+    return (((week_air - week_ctime) * sign + 7) % 7) * sign
+
+
+def should_check(series: SeriesSeason) -> bool:
+    current_time = pendulum.now(tz="Asia/Tokyo")
+    if isinstance(series.airtime, date):
+        # Airtime is a date of the original airing, so we need to convert it to a datetime
+        # with the correct day that it's in the week.
+        ctime_day = current_time.day + get_day_difference(series.airtime.weekday(), current_time.weekday())
+        airtime = pendulum.datetime(
+            year=series.airtime.year, month=series.airtime.month, day=ctime_day, tz="Asia/Tokyo"
+        )
+        yesterday = airtime.subtract(hours=2)
+        tomorrow = airtime.add(hours=2)
+        return yesterday <= current_time <= tomorrow
+    elif isinstance(series.airtime, datetime):
+        current_time = pendulum.now(tz=series.airtime.tzinfo or current_time.tzinfo)
+        ctime_day = current_time.day + get_day_difference(series.airtime.weekday(), current_time.weekday())
+        airtime = pendulum.datetime(
+            year=series.airtime.year,
+            month=series.airtime.month,
+            day=ctime_day,
+            hour=series.airtime.hour,
+            minute=series.airtime.minute,
+            tz=series.airtime.tzinfo or current_time.tzinfo,
+        )
+        diff_back = airtime.subtract(hours=2)
+        diff_future = airtime.add(hours=2)
+        return diff_back <= current_time <= diff_future
+    return True
+
+
 async def run_once():
     global _GLOBAL_TASKS
 
@@ -88,9 +123,20 @@ async def run_once():
     current_time = int(datetime.utcnow().timestamp())
     euphie_qbt = EuphieClient(config.qbt)
 
+    logger.info("Current time: %s", pendulum.now(tz="Asia/Tokyo").to_day_datetime_string())
+    configure_series: List[SeriesSeason] = []
+    for series in config.series:
+        if not should_check(series):
+            logger.info("Skipping %s, not the right time", series.id)
+            continue
+        configure_series.append(series)
+    if not configure_series:
+        logger.info("No series to check, exiting...")
+        return
+
     # Chunk series, so we don't overload Nyaa RSS and got banned.
     chunk_size = 3
-    chunk_series = [config.series[i : i + chunk_size] for i in range(0, len(config.series), chunk_size)]
+    chunk_series = [configure_series for i in range(0, len(configure_series), chunk_size)]
 
     for idx, chunk in enumerate(chunk_series, 1):
         logger.info(
@@ -108,20 +154,21 @@ async def run_once():
 
 
 if __name__ == "__main__":
-    logger.info("Starting ArcNCiel/EuphieRR v0.2.0...")
-    if LOCK_FILE.exists():
-        logger.warning("Lock file exists, exiting")
+    logger.info("Starting ArcNCiel/EuphieRR v0.3.0...")
+    config = read_config(_get_config_file())
+    # if LOCK_FILE.exists():
+    #     logger.warning("Lock file exists, exiting")
 
-    LOCK_FILE.touch()
-    try:
-        asyncio.run(run_once())
-    except (KeyboardInterrupt, SystemExit):
-        logger.warning("Interrupted, exiting...")
-        for task in _GLOBAL_TASKS:
-            task.cancel("Process got interrupted")
-    except Exception as e:
-        logger.exception("Unhandled exception: %s", str(e))
-        for task in _GLOBAL_TASKS:
-            task.cancel("Unhandled exception")
-    finally:
-        LOCK_FILE.unlink(missing_ok=True)
+    # LOCK_FILE.touch()
+    # try:
+    #     asyncio.run(run_once())
+    # except (KeyboardInterrupt, SystemExit):
+    #     logger.warning("Interrupted, exiting...")
+    #     for task in _GLOBAL_TASKS:
+    #         task.cancel("Process got interrupted")
+    # except Exception as e:
+    #     logger.exception("Unhandled exception: %s", str(e))
+    #     for task in _GLOBAL_TASKS:
+    #         task.cancel("Unhandled exception")
+    # finally:
+    #     LOCK_FILE.unlink(missing_ok=True)

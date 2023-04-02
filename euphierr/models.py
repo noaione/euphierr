@@ -23,9 +23,10 @@ SOFTWARE.
 """
 
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
 from re import Pattern
-from typing import List, Optional
+from typing import List, Optional, Union
 
 __all__ = (
     "QBittorrentConfig",
@@ -76,6 +77,7 @@ class SeriesSeason:
     """Fallback season number if not found in the torrent name, if none we will assume ``1``"""
     matches: List[str] = field(default_factory=list)
     """Extra case-insensitive matches for the torrent name before adding"""
+    airtime: Optional[Union[datetime, date]] = field(default=None)
 
     def match(self, title: str) -> bool:
         res = self.episode_regex.search(title)
