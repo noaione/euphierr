@@ -176,9 +176,18 @@ def read_config(config_path: Path) -> ArcNCielConfig:
         if not isinstance(feed_matches, list):
             logger.error("Invalid matches for feed %s, must be a list!", feed_id)
             raise ArcNCielConfigError(f"series.{idx}.matches", "Invalid matches, must be a list") from None
-        airtime = cast(Optional[Union[datetime, date]], feed.get("airtime"))
-        if airtime is not None:
-            airtime = _parse_airtime(airtime)
+        feed_airtime = cast(Optional[Union[datetime, date]], feed.get("airtime"))
+        if feed_airtime is not None:
+            feed_airtime = _parse_airtime(feed_airtime)
+        feed_grace_period = feed.get("gracePeriod", feed.get("grace_period", 120))
+        try:
+            feed_grace_period = int(feed_grace_period)
+        except ValueError:
+            logger.error("Invalid grace period for feed %s, must be an integer!", feed_id)
+            raise ArcNCielConfigError(
+                f"series.{idx}.grace_period",
+                "Invalid grace period, must be an integer",
+            ) from None
         feed_matches = list(map(str, feed_matches))
         parsed_feed = SeriesSeason(
             id=feed_id,
@@ -188,7 +197,8 @@ def read_config(config_path: Path) -> ArcNCielConfig:
             target_name=target_name,
             season=feed_season,
             matches=feed_matches,
-            airtime=airtime,
+            airtime=feed_airtime,
+            grace_period=feed_grace_period,
         )
         parsed_series_feeds.append(parsed_feed)
 
@@ -218,6 +228,7 @@ def write_config(config_path: Path, config: ArcNCielConfig):
                 "season": feed.season,
                 "matches": feed.matches,
                 "airtime": feed.airtime,
+                "grace_period": feed.grace_period,
             }
             for feed in config.series
         ],

@@ -87,41 +87,36 @@ def get_day_difference(week_air: int, week_ctime: int) -> int:
 
 def should_check(series: SeriesSeason) -> bool:
     current_time = pendulum.now(tz="Asia/Tokyo")
-    if isinstance(series.airtime, datetime):
-        current_time = pendulum.now(tz=series.airtime.tzinfo or current_time.tzinfo or "Asia/Tokyo")  # type: ignore
+    if isinstance(series.airtime, (datetime, date)):
+        timezone = "Asia/Tokyo"
+        if isinstance(series.airtime, datetime):
+            timezone = series.airtime.tzinfo or current_time.tzinfo or "Asia/Tokyo"
+            current_time = pendulum.now(tz=timezone)  # type: ignore
         time_diff = get_day_difference(series.airtime.weekday(), current_time.weekday())
-        print(time_diff)
         if time_diff > 0:
             current_time = current_time.add(days=time_diff)
         elif time_diff < 0:
             current_time = current_time.subtract(days=time_diff)
+        hours = 0
+        minutes = 0
+        seconds = 0
+        if isinstance(series.airtime, datetime):
+            hours = series.airtime.hour
+            minutes = series.airtime.minute
+            seconds = series.airtime.second
         airtime = pendulum.datetime(
             year=series.airtime.year,
             month=series.airtime.month,
             day=current_time.day,
-            hour=series.airtime.hour,
-            minute=series.airtime.minute,
-            tz=series.airtime.tzinfo or current_time.tzinfo or "Asia/Tokyo",  # type: ignore
+            hour=hours,
+            minute=minutes,
+            second=seconds,
+            tz=timezone,  # type: ignore
         )
         logger.info("Next airtime for %s: %s", series.id, airtime.to_day_datetime_string())
-        diff_back = airtime.subtract(hours=2)
-        diff_future = airtime.add(hours=2)
+        diff_back = airtime.subtract(minutes=series.grace_period)
+        diff_future = airtime.add(minutes=series.grace_period)
         return diff_back <= current_time <= diff_future
-    elif isinstance(series.airtime, date):
-        # Airtime is a date of the original airing, so we need to convert it to a datetime
-        # with the correct day that it's in the week.
-        ctime_day = current_time.day + get_day_difference(series.airtime.weekday(), current_time.weekday())
-        if time_diff > 0:
-            current_time = current_time.add(days=time_diff)
-        elif time_diff < 0:
-            current_time = current_time.subtract(days=time_diff)
-        airtime = pendulum.datetime(
-            year=series.airtime.year, month=series.airtime.month, day=ctime_day, tz="Asia/Tokyo"
-        )
-        yesterday = airtime.subtract(hours=2)
-        tomorrow = airtime.add(hours=2)
-        logger.info("Next airtime for %s: %s", series.id, airtime.to_day_datetime_string())
-        return yesterday <= current_time <= tomorrow
     return True
 
 

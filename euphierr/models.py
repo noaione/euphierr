@@ -78,6 +78,9 @@ class SeriesSeason:
     matches: List[str] = field(default_factory=list)
     """Extra case-insensitive matches for the torrent name before adding"""
     airtime: Optional[Union[datetime, date]] = field(default=None)
+    """When the series will be aired, if not set we will assume ``now``"""
+    grace_period: int = field(default=120)
+    """The minutes before/after the airtime to download the torrent"""
 
     def match(self, title: str) -> bool:
         res = self.episode_regex.search(title)
