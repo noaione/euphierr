@@ -4,6 +4,7 @@ feedparser==6.0.10
 aiohttp==3.8.4
 aiopath==0.5.12
 torf==4.1.4
+pendulum==2.1.2
 
 # Tools
 pyyaml==6.0
