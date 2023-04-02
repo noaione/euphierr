@@ -11,3 +11,7 @@ config.yml
 .arcnciel-data/
 logs/
 arcnciel.lock
+
+# More stuff
+run.sh
+run.bat
