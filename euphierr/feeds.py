@@ -23,7 +23,7 @@ SOFTWARE.
 """
 
 import asyncio
-from typing import List, Optional, cast
+from typing import Dict, List, Optional, cast
 from venv import logger
 
 import aiohttp
@@ -77,8 +77,10 @@ async def process_series(series: SeriesSeason):
         if matching_fail:
             continue
 
-        episode = int(title_match.group("episode"))
-        season = title_match.group("season")
+        matcherino = cast(Dict[str, str], title_match.groupdict())
+
+        episode = int(matcherino.get("episode"))  # type: ignore
+        season = matcherino.get("season")
         if season is not None:
             season = str(series.season)
 
@@ -88,7 +90,7 @@ async def process_series(series: SeriesSeason):
             hash=entry_infohash,
             series=series,
             episode=episode,
-            season=int(season),
+            season=int(cast(str, season)),
         )
         match_series.append(tor_info)
     logger.info("Found %d matches for %s", len(match_series), series.id)
