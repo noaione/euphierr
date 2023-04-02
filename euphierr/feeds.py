@@ -63,7 +63,7 @@ async def process_series(series: SeriesSeason):
         entry_link = cast(str, entry.link)
         entry_infohash = cast(Optional[str], entry["nyaa_infohash"])
 
-        if (title_match := series.episode_regex.match(entry_title)) is None:
+        if (title_match := series.episode_regex.search(entry_title)) is None:
             logger.warning("Entry %s does not match %s", entry_title, series.episode_regex.pattern)
             continue
 
