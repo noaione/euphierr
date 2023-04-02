@@ -65,7 +65,9 @@ async def process_series(series: SeriesSeason):
 
         is_match = series.match(entry_title)  # type: ignore
         if not is_match:
-            logger.warning("Entry %s does not match %s", entry_title, series.episode_regex.pattern)
+            logger.warning(
+                "Entry %s does not match `%s` and matcher %r", entry_title, series.episode_regex.pattern, series.matches
+            )
             continue
 
         if (title_match := series.episode_regex.match(entry_title)) is None:

@@ -83,7 +83,7 @@ class SeriesSeason:
     """The minutes before/after the airtime to download the torrent"""
 
     def match(self, title: str) -> bool:
-        res = self.episode_regex.search(title)
+        res = self.episode_regex.match(title)
         if res is None:
             return False
         for match in self.matches:
