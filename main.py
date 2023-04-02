@@ -155,20 +155,19 @@ async def run_once():
 
 if __name__ == "__main__":
     logger.info("Starting ArcNCiel/EuphieRR v0.3.0...")
-    config = read_config(_get_config_file())
-    # if LOCK_FILE.exists():
-    #     logger.warning("Lock file exists, exiting")
+    if LOCK_FILE.exists():
+        logger.warning("Lock file exists, exiting")
 
-    # LOCK_FILE.touch()
-    # try:
-    #     asyncio.run(run_once())
-    # except (KeyboardInterrupt, SystemExit):
-    #     logger.warning("Interrupted, exiting...")
-    #     for task in _GLOBAL_TASKS:
-    #         task.cancel("Process got interrupted")
-    # except Exception as e:
-    #     logger.exception("Unhandled exception: %s", str(e))
-    #     for task in _GLOBAL_TASKS:
-    #         task.cancel("Unhandled exception")
-    # finally:
-    #     LOCK_FILE.unlink(missing_ok=True)
+    LOCK_FILE.touch()
+    try:
+        asyncio.run(run_once())
+    except (KeyboardInterrupt, SystemExit):
+        logger.warning("Interrupted, exiting...")
+        for task in _GLOBAL_TASKS:
+            task.cancel("Process got interrupted")
+    except Exception as e:
+        logger.exception("Unhandled exception: %s", str(e))
+        for task in _GLOBAL_TASKS:
+            task.cancel("Unhandled exception")
+    finally:
+        LOCK_FILE.unlink(missing_ok=True)
