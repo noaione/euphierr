@@ -81,7 +81,7 @@ async def process_series(series: SeriesSeason):
 
         episode = int(matcherino.get("episode"))  # type: ignore
         season = matcherino.get("season")
-        if season is not None:
+        if season is None:
             season = str(series.season)
 
         tor_info = ArcNCielTorrent(
@@ -90,7 +90,7 @@ async def process_series(series: SeriesSeason):
             hash=entry_infohash,
             series=series,
             episode=episode,
-            season=int(cast(str, season)),
+            season=int(season),
         )
         match_series.append(tor_info)
     logger.info("Found %d matches for %s", len(match_series), series.id)
