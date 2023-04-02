@@ -2,9 +2,12 @@
 venv/
 env/
 .env/
+__pycache__
 
 config.yaml
 config.yml
 
 # Data files
 .arcnciel-data/
+logs/
+arcnciel.lock

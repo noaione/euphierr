@@ -34,5 +34,12 @@
         "**/.venv": true,
         "**/__pycache__": true,
         "**/node_modules": true,
-    }
+    },
+    "flake8.importStrategy": "fromEnvironment",
+    "flake8.args": [
+        "--config=.flake8"
+    ],
+    "editor.rulers": [
+        120,
+    ]
 }

@@ -1,3 +1,10 @@
+# Management
 qbittorrent-api==2023.3.44
 feedparser==6.0.10
+aiohttp==3.8.4
+aiopath==0.6.11
+torf==4.1.4
+
+# Tools
 pyyaml==6.0
+coloredlogs==15.0.1
