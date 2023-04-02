@@ -101,7 +101,7 @@ async def run_once():
 
 
 if __name__ == "__main__":
-    logger.info("Starting ArcNCiel/EuphieRR v0.1.0...")
+    logger.info("Starting ArcNCiel/EuphieRR v0.1.1...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 
