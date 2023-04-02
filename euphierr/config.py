@@ -64,6 +64,13 @@ def _parse_airtime(airtime: Union[datetime, date]) -> Union[datetime, date, None
     return airtime
 
 
+def _safe_clean_id(orig_id: str) -> str:
+    # Replace space with underscore
+    # Replace symbols (except underscore and dash) with underscore
+    orig_id = re.sub(r"[^a-zA-Z0-9_-]", "_", orig_id)
+    return orig_id
+
+
 def read_config(config_path: Path) -> ArcNCielConfig:
     logger = logging.getLogger("euphierr.config")
     logger.info("Reading config from %s", config_path)
@@ -118,6 +125,11 @@ def read_config(config_path: Path) -> ArcNCielConfig:
         if feed_id is None:
             feed_id = str(uuid.uuid4())
             logger.warning("No ID provided for feed %s, using gen ID %s", feed_rss_url, feed_id)
+            resave_config = True
+        _feed_id_safe = _safe_clean_id(feed_id)
+        if _feed_id_safe != feed_id:
+            logger.warning('Provided ID is "unsafe" for feed %s, using cleaned ID %s', feed_rss_url, _feed_id_safe)
+            feed_id = _feed_id_safe
             resave_config = True
         if feed_rss_url is None:
             logger.error("No RSS URL provided for feed %s", feed_id)
