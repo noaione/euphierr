@@ -38,8 +38,11 @@ async def _wrapped_downloader_and_move(torrent: ArcNCielTorrent, qbt: EuphieClie
         await source_save.rename(target_save)
         logger.info("Successfully processed %s", torrent.name)
         return torrent, True
-    except ArcNCielInvalidTorrentError as e:
-        logger.error("Failed to download %s", str(e))
+    except ArcNCielInvalidTorrentError as te:
+        logger.error("Failed to download %s", str(te))
+        return torrent, False
+    except Exception as e:
+        logger.exception("An unknown error has occured!", exc_info=e)
         return torrent, False
 
 

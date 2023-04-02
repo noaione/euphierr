@@ -160,6 +160,8 @@ class EuphieClient:
                 tor_files = await loop.run_in_executor(None, self._client.torrents_files, tor_hash)
                 tor_file = tor_files[0]["name"]
                 temporary_dl_dir = Path(tor_info["save_path"]) / tor_file  # type: ignore
+                wrap_delete = partial(self._client.torrents_delete, torrent_hashes=tor_hash)
+                await loop.run_in_executor(None, wrap_delete)
                 break
         self.logger.info(f"Torrent downloaded: {torrent.name}")
         return torrent, cast(Path, temporary_dl_dir)
