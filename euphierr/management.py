@@ -47,6 +47,8 @@ EPISODE_RE = re.compile(r"Episode S?(?P<season>[\d]+)?E(?P<episode>[\d]+)")
 
 async def get_downloaded_series(series: SeriesSeason):
     series_folder = AsyncPath(series.target_dir)
+    if await series_folder.exists() is False:
+        return {}
     episode_mappings: Dict[str, List[int]] = {}
     async for season_dir in series_folder.iterdir():
         if (await season_dir.is_dir()) and season_dir.name.startswith("Season"):
