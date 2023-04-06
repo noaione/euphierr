@@ -25,6 +25,7 @@ SOFTWARE.
 from __future__ import annotations
 
 import glob
+import gzip
 import logging
 import os
 import sys
@@ -50,6 +51,7 @@ class RollingFileHandler(RotatingFileHandler):
     """
 
     maxBytes: int  # to force mypy to stop complaining????
+    gunzip: bool
 
     def __init__(
         self,
@@ -59,6 +61,7 @@ class RollingFileHandler(RotatingFileHandler):
         backupCount: int = 0,
         encoding: Optional[str] = None,
         delay: bool = False,
+        gunzip: bool = True,
     ) -> None:
         self._last_backup_count = 0
         super().__init__(
@@ -66,13 +69,17 @@ class RollingFileHandler(RotatingFileHandler):
         )
         self.maxBytes = maxBytes
         self.backupCount = backupCount
+        self.gunzip = gunzip  # compress the log file with gzip
         self._determine_start_count()
 
     def _determine_start_count(self):
         all_files = glob.glob(self.baseFilename + "*")
         if all_files:
             all_files.sort()
-            last_digit = all_files[-1].split(".")[-1]
+            fn = all_files[-1]
+            if fn.endswith(".gz"):
+                fn = fn[:-3]
+            last_digit = fn.split(".")[-1]
             if last_digit.isdigit():
                 self._last_backup_count = int(last_digit)
 
@@ -84,6 +91,25 @@ class RollingFileHandler(RotatingFileHandler):
         self.rotate(self.baseFilename, next_name)
         if not self.delay:
             self.stream = self._open()
+
+    def rotator(self, source: str, dest: str) -> None:
+        if not os.path.exists(source):
+            return  # silently fails
+        if self.gunzip:
+            with open(source, "rb") as sf:
+                with gzip.open(dest + ".gz", "wb") as df:
+                    for line in sf:
+                        df.write(line)
+            try:
+                os.remove(source)
+            except OSError:
+                pass
+        else:
+            # Just rename the file
+            try:
+                os.rename(source, dest)
+            except OSError:
+                pass
 
 
 def setup_logger(log_path: Path):
