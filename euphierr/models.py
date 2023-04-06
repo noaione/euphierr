@@ -136,8 +136,8 @@ class ArcNCielTorrent:
     season: Optional[int] = field(default=None)
 
     def to_data_content(self, extension: str):
-        if extension.endswith("."):
-            extension = extension[:-1]
+        if extension.startswith("."):
+            extension = extension[1:]
         filename_fmt = self.series.target_name.format(
             season=self.actual_season,
             episode=self.episode,

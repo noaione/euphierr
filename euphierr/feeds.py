@@ -71,7 +71,7 @@ async def process_series(series: SeriesSeason):
         matching_fail = False
         for idx, match in enumerate(matchers):
             if match.lower() not in entry_title.lower():
-                logger.warning("Entry %s does not match (%d) %s", entry_title, idx, match)
+                logger.warning("Entry %s does not match (matcher #%d): `%s`", entry_title, idx, match)
                 matching_fail = True
                 continue
         if matching_fail:

@@ -236,7 +236,6 @@ def write_config(config_path: Path, config: ArcNCielConfig):
                 "rss": feed.rss,
                 "episode_regex": feed.episode_regex.pattern,
                 "target_dir": str(feed.target_dir),
-                "target_name": feed.target_name,
                 "season": feed.season,
                 "matches": feed.matches,
                 "airtime": feed.airtime,
