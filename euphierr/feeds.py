@@ -67,10 +67,22 @@ async def process_series(series: SeriesSeason):
             logger.warning("Entry %s does not match %s", entry_title, series.episode_regex.pattern)
             continue
 
+        ignore_matchers = series.ignore_matches
+        ignore_success = False
+        for idx, ignore_match in enumerate(ignore_matchers):
+            if ignore_match.casefold() in entry_title.casefold():
+                logger.warning(
+                    "Entry %s matches ignore matcher #%d: `%s` (ignoring...)", entry_title, idx, ignore_match
+                )
+                ignore_success = True
+                break
+        if ignore_success:
+            continue
+
         matchers = series.matches
         matching_fail = False
         for idx, match in enumerate(matchers):
-            if match.lower() not in entry_title.lower():
+            if match.casefold() not in entry_title.casefold():
                 logger.warning("Entry %s does not match (matcher #%d): `%s`", entry_title, idx, match)
                 matching_fail = True
                 continue

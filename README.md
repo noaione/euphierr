@@ -68,7 +68,16 @@ series:
     matches:
     - 1080p
     - DSNP
-    airtime: 2023-04-01T22:30:00+09:00
+    # Ignore keyword matches, case insensitive
+    ignore_matches:
+    - 720p
+    - DUAL
+    # The time the episode will air, this is used to determine if we should download the episode
+    # or not by checking if the current time is near the airtime with the provided grace period
+    airtime: 2023-04-06T22:30:00+09:00
+    # The grace period in minutes, used with airtime to determine if we should download the episode
+    # or not by checking if the current time is near the airtime with the provided grace period.
+    grace_period: 120
 ```
 
 ### Explanation

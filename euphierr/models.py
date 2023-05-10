@@ -77,6 +77,8 @@ class SeriesSeason:
     """Fallback season number if not found in the torrent name, if none we will assume ``1``"""
     matches: List[str] = field(default_factory=list)
     """Extra case-insensitive matches for the torrent name before adding"""
+    ignore_matches: List[str] = field(default_factory=list)
+    """Extra case-insensitive ignores for the torrent name before adding"""
     airtime: Optional[Union[datetime, date]] = field(default=None)
     """When the series will be aired, if not set we will assume ``now``"""
     grace_period: int = field(default=120)
