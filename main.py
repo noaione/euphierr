@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 from datetime import date, datetime
 from pathlib import Path
@@ -131,18 +132,18 @@ def should_check(series: SeriesSeason) -> bool:
     return True
 
 
-async def run_once():
+async def run_once(config_path: Path, skip_time_check: bool = False):
     global _GLOBAL_TASKS
 
     logger.info("Starting run...")
-    config = read_config(_get_config_file())
+    config = read_config(config_path)
     current_time = int(datetime.utcnow().timestamp())
     euphie_qbt = EuphieClient(config.qbt)
 
     logger.info("Current time: %s", pendulum.now(tz="Asia/Tokyo").to_day_datetime_string())
     configure_series: List[SeriesSeason] = []
     for series in config.series:
-        if not should_check(series):
+        if not skip_time_check and not should_check(series):
             logger.info("Skipping %s, not the right time", series.id)
             continue
         configure_series.append(series)
@@ -169,14 +170,45 @@ async def run_once():
     logger.info("Run complete")
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="EuphieRR — A simple Sonarr-like RSS downloader")
+    parser.add_argument(
+        "-c",
+        "--config",
+        dest="config",
+        type=str,
+        default=None,
+        help="Path to config file",
+    )
+    parser.add_argument(
+        "-S",
+        "--skip-time-check",
+        dest="skip_time_check",
+        action="store_true",
+        default=False,
+        help="Skip time check for series, run all series",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    logger.info("Starting ArcNCiel/EuphieRR v0.3.10...")
+    args = parse_args()
+    if args.config is not None:
+        config_path = Path(args.config)
+        if not config_path.exists():
+            raise ValueError(f"Config file provided {args.config} does not exist")
+    else:
+        config_path = _get_config_file()
+
+    skip_time_check = bool(args.skip_time_check)
+
+    logger.info("Starting ArcNCiel/EuphieRR v0.3.11...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 
     LOCK_FILE.touch()
     try:
-        asyncio.run(run_once())
+        asyncio.run(run_once(config_path, skip_time_check))
     except (KeyboardInterrupt, SystemExit):
         logger.warning("Interrupted, exiting...")
         for task in _GLOBAL_TASKS:
