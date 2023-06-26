@@ -170,7 +170,12 @@ async def run_once(config_path: Path, skip_time_check: bool = False):
     logger.info("Run complete")
 
 
-def parse_args():
+class ArgumentData(argparse.Namespace):
+    config: Optional[str] = None
+    skip_time_check: bool = False
+
+
+def parse_args() -> ArgumentData:
     parser = argparse.ArgumentParser(description="EuphieRR — A simple Sonarr-like RSS downloader")
     parser.add_argument(
         "-c",
@@ -188,7 +193,7 @@ def parse_args():
         default=False,
         help="Skip time check for series, run all series",
     )
-    return parser.parse_args()
+    return parser.parse_args(namespace=ArgumentData())
 
 
 if __name__ == "__main__":
