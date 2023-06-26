@@ -7,12 +7,12 @@ from typing import Any, List, Optional, Tuple
 import pendulum
 from aiopath import AsyncPath
 
+from euphierr.clients import EuphieClient, get_client
 from euphierr.config import read_config
 from euphierr.exceptions import ArcNCielInvalidTorrentError, ArcNCielNoConfigFile
 from euphierr.feeds import process_series
 from euphierr.management import get_arcnciel_data, get_downloaded_series, save_arcnciel_data
 from euphierr.models import ArcNCielTorrent, SeriesSeason
-from euphierr.qbt import EuphieClient
 from euphierr.tooling import setup_logger
 
 ROOT_DIR = Path(__file__).absolute().parent
@@ -30,9 +30,9 @@ def _get_config_file() -> Path:
     return config_file
 
 
-async def _wrapped_downloader_and_move(torrent: ArcNCielTorrent, qbt: EuphieClient):
+async def _wrapped_downloader_and_move(torrent: ArcNCielTorrent, client: EuphieClient):
     try:
-        torrent, save_dir = await qbt.add_and_wait(torrent)
+        torrent, save_dir = await client.add_and_wait(torrent)
         source_save = AsyncPath(save_dir)
         target_save = AsyncPath(torrent.to_data_content(source_save.suffix).path)
         await target_save.parent.mkdir(parents=True, exist_ok=True)
@@ -48,7 +48,7 @@ async def _wrapped_downloader_and_move(torrent: ArcNCielTorrent, qbt: EuphieClie
         return torrent, None, False
 
 
-async def _run_feed(series: SeriesSeason, qbt: EuphieClient):
+async def _run_feed(series: SeriesSeason, client: EuphieClient):
     global _GLOBAL_TASKS
 
     logger.info("Processing %s", series.id)
@@ -70,7 +70,7 @@ async def _run_feed(series: SeriesSeason, qbt: EuphieClient):
     tasks: List[asyncio.Task[Tuple[ArcNCielTorrent, Optional[AsyncPath], bool]]] = []
     for feed in to_be_downloaded:
         task_name = f"FEED_{series.id}_{feed.hash}_{current_time}"
-        task = asyncio.create_task(_wrapped_downloader_and_move(feed, qbt), name=task_name)
+        task = asyncio.create_task(_wrapped_downloader_and_move(feed, client), name=task_name)
         tasks.append(task)
         _GLOBAL_TASKS.append(task)
     logger.info("Running %d feed tasks for series %s...", len(tasks), series.id)
@@ -138,7 +138,7 @@ async def run_once(config_path: Path, skip_time_check: bool = False):
     logger.info("Starting run...")
     config = read_config(config_path)
     current_time = int(datetime.utcnow().timestamp())
-    euphie_qbt = EuphieClient(config.qbt)
+    euphie_client = get_client(config.client)
 
     logger.info("Current time: %s", pendulum.now(tz="Asia/Tokyo").to_day_datetime_string())
     configure_series: List[SeriesSeason] = []
@@ -162,7 +162,7 @@ async def run_once(config_path: Path, skip_time_check: bool = False):
         tasks: List[asyncio.Task[None]] = []
         for series in chunk:
             task_name = f"SERIES_CHUNK_{idx}_{series.id}_{current_time}"
-            task = asyncio.create_task(_run_feed(series, euphie_qbt), name=task_name)
+            task = asyncio.create_task(_run_feed(series, euphie_client), name=task_name)
             tasks.append(task)
             _GLOBAL_TASKS.append(task)
         logger.info("Executing series chunk %d/%d tasks...", idx, len(chunk_series))

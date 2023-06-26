@@ -26,47 +26,59 @@ SOFTWARE.
 
 import asyncio
 import logging
-from functools import partial
-from io import BytesIO
+from functools import partial as ftpartial
 from pathlib import Path
-from typing import Optional, Tuple, Union, cast, overload
+from typing import TYPE_CHECKING, Optional, Tuple, Union, cast, overload
 
-import aiohttp
-import qbittorrentapi as qbtapi
-from qbittorrentapi.exceptions import UnsupportedMediaType415Error
-from qbittorrentapi.torrents import TorrentDictionary, TorrentInfoList
-from torf import Torrent as TorfTorrent
+from euphierr.exceptions import ArcNCielInvalidTorrentError, ArcNCielInvalidTorrentURL
+from euphierr.models import ArcNCielTorrent, ClienteleConfig
 
-from euphierr.exceptions import (
-    ArcNCielInvalidTorrentError,
-    ArcNCielInvalidTorrentTooManyFiles,
-    ArcNCielInvalidTorrentURL,
+from .base import EuphieClient
+
+try:
+    import qbittorrentapi as qbtapi
+
+    _has_qbittorrent_api = True
+except ImportError:
+    _has_qbittorrent_api = False
+
+
+if TYPE_CHECKING:
+    from qbittorrentapi import TorrentDictionary, TorrentInfoList
+
+
+__all__ = (
+    "EuphieQbtClient",
+    "has_qbt_api",
 )
-from euphierr.models import ArcNCielTorrent, QBittorrentConfig
-
-__all__ = ("EuphieClient",)
-__UA__ = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0"  # noqa
 
 
-class EuphieClient:
-    def __init__(self, qbt_conf: QBittorrentConfig) -> None:
+def has_qbt_api() -> bool:
+    return _has_qbittorrent_api
+
+
+class EuphieQbtClient(EuphieClient):
+    def __init__(self, config: ClienteleConfig) -> None:
+        super().__init__(config)
+
         self._client = qbtapi.Client(
-            host=qbt_conf.host,
-            port=qbt_conf.port,
-            username=qbt_conf.username,
-            password=qbt_conf.password,
+            host=self._config.host,
+            port=self._config.port,
+            username=self._config.username,
+            password=self._config.password,
         )
         self.logger = logging.getLogger("euphierr.qbt")
-        self._config = qbt_conf
 
     @property
     def client(self) -> qbtapi.Client:
         return self._client
 
     async def _add_torrent(self, torrent_url: str, torrent_bytes: bytes):
+        from qbittorrentapi.exceptions import UnsupportedMediaType415Error
+
         category = self._config.category
         loop = asyncio.get_event_loop()
-        torrent_add_wrap = partial(
+        torrent_add_wrap = ftpartial(
             self._client.torrents_add,
             torrent_files=torrent_bytes,
             category=category,
@@ -92,7 +104,7 @@ class EuphieClient:
         category = self._config.category
         if torrent_hash is not None:
             category = None
-        torrent_list_wrap = partial(
+        torrent_list_wrap = ftpartial(
             self._client.torrents_info,
             category=category,
             sort="added_on",
@@ -109,27 +121,6 @@ class EuphieClient:
                     return torrent
             return None
         return results
-
-    async def download_torrent(self, torrent_url: str) -> tuple[bytes, str]:
-        async with aiohttp.ClientSession(
-            headers={
-                "User-Agent": __UA__,
-            }
-        ) as session:
-            async with session.get(torrent_url) as resp:
-                if resp.status != 200:
-                    raise ArcNCielInvalidTorrentURL(torrent_url)
-                torrent_data = await resp.read()
-                torrent_stream = BytesIO(torrent_data)
-                torrent_stream.seek(0)
-                try:
-                    torrent = TorfTorrent.read_stream(torrent_stream)
-                    if len(torrent.files) > 1:
-                        raise ArcNCielInvalidTorrentTooManyFiles(torrent_url)
-                    torrent_stream.close()
-                    return torrent_data, torrent.infohash
-                except Exception:
-                    raise ArcNCielInvalidTorrentError(f"Failed to read torrent: {torrent_url}")
 
     async def add_and_wait(self, torrent: ArcNCielTorrent) -> Tuple[ArcNCielTorrent, Path]:
         self.logger.info(f"Adding torrent to client: {torrent.name}")
@@ -160,7 +151,7 @@ class EuphieClient:
                 tor_files = await loop.run_in_executor(None, self._client.torrents_files, tor_hash)
                 tor_file = tor_files[0]["name"]
                 temporary_dl_dir = Path(tor_info["save_path"]) / tor_file  # type: ignore
-                wrap_delete = partial(self._client.torrents_delete, torrent_hashes=tor_hash)
+                wrap_delete = ftpartial(self._client.torrents_delete, torrent_hashes=tor_hash)
                 await loop.run_in_executor(None, wrap_delete)
                 break
         self.logger.info(f"Torrent downloaded: {torrent.name}")

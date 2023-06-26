@@ -38,9 +38,11 @@ This would make sure Jellyfin detect the series properly.
 ## Configuration
 
 ```yaml
-# qBittorrent configuration
-qbt:
-  # The URL to qBittorrent's WebUI
+# Client configuration
+client:
+  # The client type (currently: `qbt`)
+  type: qbt
+  # The URL to Torrent Client WebUI
   url: http://localhost:8080
   # The username to log in with
   username: admin

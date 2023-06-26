@@ -37,8 +37,9 @@ from urllib.parse import urlparse
 
 import yaml
 
+from euphierr.clients import available_clients
 from euphierr.exceptions import ArcNCielConfigError
-from euphierr.models import ArcNCielConfig, QBittorrentConfig, SeriesSeason
+from euphierr.models import ArcNCielConfig, ClienteleConfig, SeriesSeason
 
 __all__ = (
     "read_config",
@@ -77,23 +78,32 @@ def read_config(config_path: Path) -> ArcNCielConfig:
     with config_path.open("r") as f:
         data = yaml.safe_load(f)
 
-    qbit_conf = data.get("qbt")
-    if not qbit_conf:
-        raise ArcNCielConfigError("qbt", "Missing key")
-    qbit_url = qbit_conf.get("url", qbit_conf.get("uri"))
-    qbit_user = qbit_conf.get("username", qbit_conf.get("user", qbit_conf.get("email")))
-    qbit_pass = qbit_conf.get("password", qbit_conf.get("pass"))
-    if not qbit_url:
+    resave_config = False
+    clientele_conf = data.get("client")
+    if not clientele_conf:
+        qbt_conf = data.get("qbt")
+        if qbt_conf is None:
+            raise ArcNCielConfigError("client", "Missing key")
+        logger.warning("Using deprecated key 'qbt' for client config, please use 'client' instead")
+        clientele_conf = qbt_conf
+        resave_config = True
+    clientele_type = clientele_conf.get("type", "qbt")
+    if clientele_type.lower() not in available_clients():
+        raise ArcNCielConfigError("client.type", "Unknown client type")
+    clientele_url = clientele_conf.get("url", clientele_conf.get("uri"))
+    clientele_user = clientele_conf.get("username", clientele_conf.get("user", clientele_conf.get("email")))
+    clientele_pass = clientele_conf.get("password", clientele_conf.get("pass"))
+    if not clientele_url:
         raise ArcNCielConfigError("qbt.url", "Missing key")
 
     # Validate URL
-    parsed_qbt_host = urlparse(qbit_url)
+    parsed_qbt_host = urlparse(cast(str, clientele_url))
     if not parsed_qbt_host.netloc:
         raise ArcNCielConfigError("qbt.url", "Invalid URL, missing domain/host")
     hostport = parsed_qbt_host.netloc.split(":", 1)
     host = hostport[0]
     if len(hostport) > 1:
-        port = hostport[1]
+        port = int(hostport[1])
     else:
         if parsed_qbt_host.scheme.startswith("http"):
             port = None
@@ -103,20 +113,20 @@ def read_config(config_path: Path) -> ArcNCielConfig:
             )
     if parsed_qbt_host.path:
         host += parsed_qbt_host.path
-    qbt_category = qbit_conf.get("category")
-    parsed_qbt_conf = QBittorrentConfig(
+    qbt_category = clientele_conf.get("category")
+    parsed_clientele_conf = ClienteleConfig(
+        type=clientele_type,
         host=host,
-        _raw_input=qbit_url,
+        _raw_input=clientele_url,
         port=port,
-        username=qbit_user,
-        password=qbit_pass,
+        username=clientele_user,
+        password=clientele_pass,
         category=qbt_category,
     )
-    logger.info("Using qbittorrent host: %s", parsed_qbt_conf.host)
+    logger.info("Using client host: %s", parsed_clientele_conf.host)
 
     series_feeds = data.get("series", [])
     parsed_series_feeds: List[SeriesSeason] = []
-    resave_config = False
     for idx, feed in enumerate(series_feeds):
         if not isinstance(feed, dict):
             raise ArcNCielConfigError(f"series.{idx}", "Invalid feed data (not a dictionary)")
@@ -223,7 +233,7 @@ def read_config(config_path: Path) -> ArcNCielConfig:
         )
         parsed_series_feeds.append(parsed_feed)
 
-    arcn_config = ArcNCielConfig(qbt=parsed_qbt_conf, series=parsed_series_feeds)
+    arcn_config = ArcNCielConfig(client=parsed_clientele_conf, series=parsed_series_feeds)
     if resave_config:
         logger.info("Resaving config because of changes to %s", config_path)
         write_config(config_path, arcn_config)
@@ -233,11 +243,12 @@ def read_config(config_path: Path) -> ArcNCielConfig:
 
 def write_config(config_path: Path, config: ArcNCielConfig):
     data = {
-        "qbt": {
-            "url": config.qbt._raw_input,
-            "username": config.qbt.username,
-            "password": config.qbt.password,
-            "category": config.qbt.category,
+        "client": {
+            "type": "qbt",
+            "url": config.client._raw_input,
+            "username": config.client.username,
+            "password": config.client.password,
+            "category": config.client.category,
         },
         "series": [
             {

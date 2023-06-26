@@ -29,7 +29,7 @@ from re import Pattern
 from typing import List, Optional, Union
 
 __all__ = (
-    "QBittorrentConfig",
+    "ClienteleConfig",
     "SeriesSeason",
     "ArcNCielConfig",
     "ArcNCielDataContent",
@@ -39,7 +39,9 @@ __all__ = (
 
 
 @dataclass
-class QBittorrentConfig:
+class ClienteleConfig:
+    type: str
+    """The type of the client, currently only support qBittorrent"""
     host: str
     """The Web API Host"""
     _raw_input: str = field(repr=False)
@@ -100,7 +102,7 @@ class ArcNCielConfig:
     Configuration file for EuphieRR.
     """
 
-    qbt: QBittorrentConfig
+    client: ClienteleConfig
     """qBittorrent configuration"""
     series: List[SeriesSeason]
     """Series downloader configuration"""
