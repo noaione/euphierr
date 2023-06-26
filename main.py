@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
     skip_time_check = bool(args.skip_time_check)
 
-    logger.info("Starting ArcNCiel/EuphieRR v0.4.0...")
+    logger.info("Starting ArcNCiel/EuphieRR v0.5.0...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 
