@@ -91,16 +91,16 @@ class EuphieQbtClient(EuphieClient):
             raise ArcNCielInvalidTorrentURL(torrent_url)
 
     @overload
-    async def _list_torrents(self, torrent_hash: str) -> Optional[TorrentDictionary]:
+    async def _list_torrents(self, torrent_hash: str) -> Optional["TorrentDictionary"]:
         ...
 
     @overload
-    async def _list_torrents(self, torrent_hash: None = None) -> TorrentInfoList:
+    async def _list_torrents(self, torrent_hash: None = None) -> "TorrentInfoList":
         ...
 
     async def _list_torrents(
         self, torrent_hash: Optional[str] = None
-    ) -> Union[Optional[TorrentDictionary], TorrentInfoList]:
+    ) -> Union[Optional["TorrentDictionary"], "TorrentInfoList"]:
         category = self._config.category
         if torrent_hash is not None:
             category = None
