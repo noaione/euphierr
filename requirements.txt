@@ -1,7 +1,7 @@
 # Management
 qbittorrent-api==2023.3.44
 feedparser==6.0.10
-aiohttp==3.8.4
+aiohttp==3.8.5
 aiopath==0.5.12
 torf==4.1.4
 pendulum==2.1.2
