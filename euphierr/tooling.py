@@ -70,10 +70,11 @@ class RollingFileHandler(RotatingFileHandler):
         self.backupCount = backupCount
         self.gunzip = gunzip
         self._base_path = Path(filename).parent
+        self._filename = Path(filename).name
         self._determine_start_count()
 
     def _determine_start_count(self):
-        all_files = list(self._base_path.glob(f"{self.baseFilename}*"))
+        all_files = list(self._base_path.glob(f"{self._filename}*"))
         if all_files:
             all_files.sort(key=lambda x: x.stem)
             fn = all_files[-1]
