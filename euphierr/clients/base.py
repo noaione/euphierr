@@ -37,7 +37,7 @@ from euphierr.exceptions import (
 from euphierr.models import ArcNCielTorrent, ClienteleConfig
 
 __all__ = ("EuphieClient",)
-__UA__ = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0"  # noqa
+__UA__ = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0"
 
 
 class EuphieClient:

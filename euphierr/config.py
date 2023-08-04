@@ -217,6 +217,21 @@ def read_config(config_path: Path) -> ArcNCielConfig:
                 f"series.{idx}.grace_period",
                 "Invalid grace period, must be an integer",
             ) from None
+        feed_start_from = feed.get("startFrom", feed.get("start_from", 0))
+        try:
+            feed_start_from = int(feed_start_from)
+        except ValueError:
+            logger.error("Invalid start from for feed %s, must be an integer!", feed_id)
+            raise ArcNCielConfigError(
+                f"series.{idx}.start_from",
+                "Invalid start from, must be an integer",
+            ) from None
+        if feed_start_from < 0:
+            logger.error("Invalid start from for feed %s, must be a positive integer!", feed_id)
+            raise ArcNCielConfigError(
+                f"series.{idx}.start_from",
+                "Invalid start from, must be a positive integer",
+            ) from None
         feed_matches = list(map(str, feed_matches))
         feed_ignore_matches = list(map(str, feed_ignore_matches))
         parsed_feed = SeriesSeason(
@@ -230,6 +245,7 @@ def read_config(config_path: Path) -> ArcNCielConfig:
             ignore_matches=feed_ignore_matches,
             airtime=feed_airtime,
             grace_period=feed_grace_period,
+            start_from=feed_start_from,
         )
         parsed_series_feeds.append(parsed_feed)
 
@@ -261,6 +277,7 @@ def write_config(config_path: Path, config: ArcNCielConfig):
                 "ignore_matches": feed.ignore_matches,
                 "airtime": feed.airtime,
                 "grace_period": feed.grace_period,
+                "start_from": feed.start_from,
             }
             for feed in config.series
         ],

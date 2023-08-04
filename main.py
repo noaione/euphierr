@@ -48,7 +48,7 @@ async def _wrapped_downloader_and_move(torrent: ArcNCielTorrent, client: EuphieC
         return torrent, None, False
 
 
-async def _run_feed(series: SeriesSeason, client: EuphieClient):
+async def _run_feed(series: SeriesSeason, client: EuphieClient, *, skip_start_check: bool = False):
     global _GLOBAL_TASKS
 
     logger.info("Processing %s", series.id)
@@ -62,6 +62,7 @@ async def _run_feed(series: SeriesSeason, client: EuphieClient):
             continue
         logger.warning(f"Episode S{feed.actual_season:02d}E{feed.episode:02d} already downloaded, skipping...")
 
+    to_be_downloaded = [feed for feed in to_be_downloaded if not skip_start_check and feed.episode >= series.start_from]
     if not to_be_downloaded:
         logger.info("No new episodes for %s", series.id)
         return
@@ -132,7 +133,7 @@ def should_check(series: SeriesSeason) -> bool:
     return True
 
 
-async def run_once(config_path: Path, skip_time_check: bool = False):
+async def run_once(config_path: Path, *, skip_time_check: bool = False, skip_start_check: bool = False):
     global _GLOBAL_TASKS
 
     logger.info("Starting run...")
@@ -162,7 +163,9 @@ async def run_once(config_path: Path, skip_time_check: bool = False):
         tasks: List[asyncio.Task[None]] = []
         for series in chunk:
             task_name = f"SERIES_CHUNK_{idx}_{series.id}_{current_time}"
-            task = asyncio.create_task(_run_feed(series, euphie_client), name=task_name)
+            task = asyncio.create_task(
+                _run_feed(series, euphie_client, skip_start_check=skip_start_check), name=task_name
+            )
             tasks.append(task)
             _GLOBAL_TASKS.append(task)
         logger.info("Executing series chunk %d/%d tasks...", idx, len(chunk_series))
@@ -173,6 +176,7 @@ async def run_once(config_path: Path, skip_time_check: bool = False):
 class ArgumentData(argparse.Namespace):
     config: Optional[str] = None
     skip_time_check: bool = False
+    skip_start_check: bool = False
 
 
 def parse_args() -> ArgumentData:
@@ -186,12 +190,20 @@ def parse_args() -> ArgumentData:
         help="Path to config file",
     )
     parser.add_argument(
-        "-S",
+        "-stc",
         "--skip-time-check",
         dest="skip_time_check",
         action="store_true",
         default=False,
         help="Skip time check for series, run all series",
+    )
+    parser.add_argument(
+        "-ssc",
+        "--skip-start-check",
+        dest="skip_start_check",
+        action="store_true",
+        default=False,
+        help="Skip start from check for series",
     )
     return parser.parse_args(namespace=ArgumentData())
 
@@ -206,14 +218,15 @@ if __name__ == "__main__":
         config_path = _get_config_file()
 
     skip_time_check = bool(args.skip_time_check)
+    skip_start_check = bool(args.skip_start_check)
 
-    logger.info("Starting ArcNCiel/EuphieRR v0.5.0...")
+    logger.info("Starting ArcNCiel/EuphieRR v0.6.0...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 
     LOCK_FILE.touch()
     try:
-        asyncio.run(run_once(config_path, skip_time_check))
+        asyncio.run(run_once(config_path, skip_time_check=skip_time_check, skip_start_check=skip_start_check))
     except (KeyboardInterrupt, SystemExit):
         logger.warning("Interrupted, exiting...")
         for task in _GLOBAL_TASKS:

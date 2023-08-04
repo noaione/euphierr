@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
@@ -36,6 +37,7 @@ __all__ = (
     "ArcNCielData",
     "ArcNCielTorrent",
 )
+logger = logging.getLogger("euphierr.models")
 
 
 @dataclass
@@ -66,10 +68,6 @@ class SeriesSeason:
     """
     rss: str
     """The RSS url, support the *.nyaa.si web only"""
-    """
-    The final filename (without extension) that will be used in the Jellyfin library folders.
-    Default to: Episode S{season}E{episode}
-    """
     episode_regex: Pattern[str]
     """The regex to match the episode number and season number (if available) from the torrent name"""
     target_dir: Path
@@ -85,6 +83,8 @@ class SeriesSeason:
     """When the series will be aired, if not set we will assume ``now``"""
     grace_period: int = field(default=120)
     """The minutes before/after the airtime to download the torrent"""
+    start_from: int = field(default=0)
+    """Start from episode number, default to ``0``"""
 
     def match(self, title: str) -> bool:
         res = self.episode_regex.match(title)
@@ -93,6 +93,11 @@ class SeriesSeason:
         for match in self.matches:
             if match.lower() not in title.lower():
                 return False
+        try:
+            episode = int(res.group("episode"))
+            return episode >= self.start_from
+        except ValueError:
+            logger.warning(f"Ignoring parsing error for {title}, missing group 'episode'")
         return True
 
 

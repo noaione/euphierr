@@ -24,7 +24,6 @@ SOFTWARE.
 
 from __future__ import annotations
 
-import glob
 import gzip
 import logging
 import os
@@ -50,14 +49,14 @@ class RollingFileHandler(RotatingFileHandler):
     At startup, we check the last file in the directory and start from there.
     """
 
-    maxBytes: int  # to force mypy to stop complaining????
+    maxBytes: int
     gunzip: bool
 
     def __init__(
         self,
         filename: os.PathLike,
         mode: str = "a",
-        maxBytes: int = 0,  # noqa
+        maxBytes: int = 0,
         backupCount: int = 0,
         encoding: Optional[str] = None,
         delay: bool = False,
@@ -69,21 +68,20 @@ class RollingFileHandler(RotatingFileHandler):
         )
         self.maxBytes = maxBytes
         self.backupCount = backupCount
-        self.gunzip = gunzip  # compress the log file with gzip
+        self.gunzip = gunzip
+        self._base_path = Path(filename).parent
         self._determine_start_count()
 
     def _determine_start_count(self):
-        all_files = glob.glob(self.baseFilename + "*")
+        all_files = list(self._base_path.glob(f"{self.baseFilename}*"))
         if all_files:
-            all_files.sort()
+            all_files.sort(key=lambda x: x.stem)
             fn = all_files[-1]
-            if fn.endswith(".gz"):
-                fn = fn[:-3]
-            last_digit = fn.split(".")[-1]
+            last_digit = fn.stem.split(".")[-1]
             if last_digit.isdigit():
                 self._last_backup_count = int(last_digit)
 
-    def doRollover(self) -> None:  # noqa: N802
+    def doRollover(self) -> None:
         if self.stream and not self.stream.closed:
             self.stream.close()
         self._last_backup_count += 1
@@ -92,24 +90,46 @@ class RollingFileHandler(RotatingFileHandler):
         if not self.delay:
             self.stream = self._open()
 
-    def rotator(self, source: str, dest: str) -> None:
-        if not os.path.exists(source):
-            return  # silently fails
-        if self.gunzip:
-            with open(source, "rb") as sf:
+    def _safe_gunzip(self, source: str, dest: str):
+        try:
+            with Path(source).open("rb") as sf:
                 with gzip.open(dest + ".gz", "wb") as df:
                     for line in sf:
                         df.write(line)
-            try:
-                os.remove(source)
-            except OSError:
-                pass
+            return True
+        except Exception:
+            return False
+
+    def _safe_rename(self, source: str, dest: str):
+        try:
+            Path(source).rename(dest)
+            return True
+        except Exception:
+            return False
+
+    def _safe_remove(self, source: str):
+        try:
+            Path(source).unlink(missing_ok=True)
+            return True
+        except Exception:
+            return False
+
+    def rotator(self, source: str, dest: str) -> None:
+        # Override the rotator to gzip the file before moving it
+        if not Path(source).exists():
+            return  # silently fails
+        if self.gunzip:
+            # Try to gzip the file
+            result = self._safe_gunzip(source, dest)
+            if result:
+                # If successful, delete the original file
+                self._safe_remove(source)
+            else:
+                # If not successful, just rename the file
+                self._safe_rename(source, dest)
         else:
             # Just rename the file
-            try:
-                os.rename(source, dest)
-            except OSError:
-                pass
+            self._safe_rename(source, dest)
 
 
 def setup_logger(log_path: Path):
@@ -119,7 +139,7 @@ def setup_logger(log_path: Path):
     logging.basicConfig(
         level=logging.DEBUG,
         handlers=[file_handler],
-        format="[%(asctime)s] - (%(name)s)[%(levelname)s](%(funcName)s): %(message)s",  # noqa: E501
+        format="[%(asctime)s] - (%(name)s)[%(levelname)s](%(funcName)s): %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
     logger = logging.getLogger()

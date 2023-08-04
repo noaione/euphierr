@@ -22,6 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+import asyncio
 import re
 from io import StringIO
 from math import inf as Infinity
@@ -74,13 +75,18 @@ async def get_downloaded_series(series: SeriesSeason):
     return episode_mappings
 
 
+async def _load_arcnciel_data_yaml(yaml_path: Path):
+    loop = asyncio.get_event_loop()
+    read_bytes = await loop.run_in_executor(None, yaml_path.read_bytes)
+    return yaml.safe_load(read_bytes)
+
+
 async def get_arcnciel_data(series: SeriesSeason):
     arcnseries = ARCNCIEL_PATH / f"{series.id}.yml"
     if not arcnseries.exists():
         return ArcNCielData(series.id, [])
 
-    with open(arcnseries, "r") as f:
-        data = yaml.safe_load(f)
+    data = await _load_arcnciel_data_yaml(arcnseries)
 
     series_id = data.get("id", series.id)
     series_contents = data.get("contents")

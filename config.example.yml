@@ -40,4 +40,6 @@ series:
     # The grace period in minutes, used with airtime to determine if we should download the episode
     # or not by checking if the current time is near the airtime with the provided grace period.
     grace_period: 120
-
+    # The starting episode, used to determine which episode to start downloading from
+    # Default to zero, which should cover any special episodes.
+    start_from: 0

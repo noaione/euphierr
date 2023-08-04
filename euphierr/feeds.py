@@ -37,7 +37,7 @@ __all__ = (
     "process_series",
     "fetch_single_feed",
 )
-__UA__ = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0"  # noqa
+__UA__ = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/111.0"
 
 
 async def fetch_single_feed(feed_url: str) -> FeedParserDict:
