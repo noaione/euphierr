@@ -129,7 +129,13 @@ def should_check(series: SeriesSeason) -> bool:
         )
         diff_back = airtime.subtract(minutes=series.grace_period)
         diff_future = airtime.add(minutes=series.grace_period)
-        return diff_back <= current_time <= diff_future
+        graceful_future = diff_back <= current_time <= diff_future
+        if not graceful_future:
+            logger.warning("Current time %s not in grace period, trying 7 days back...", current_time)
+            diff_back = diff_back.subtract(days=7)
+            diff_future = diff_future.subtract(days=7)
+            return diff_back <= current_time <= diff_future
+        return True
     return True
 
 
@@ -220,7 +226,7 @@ if __name__ == "__main__":
     skip_time_check = bool(args.skip_time_check)
     skip_start_check = bool(args.skip_start_check)
 
-    logger.info("Starting ArcNCiel/EuphieRR v0.6.1...")
+    logger.info("Starting ArcNCiel/EuphieRR v0.6.2...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 
