@@ -134,7 +134,9 @@ def should_check(series: SeriesSeason) -> bool:
             logger.warning("Current time %s not in grace period, trying 7 days back...", current_time)
             diff_back = diff_back.subtract(days=7)
             diff_future = diff_future.subtract(days=7)
-            return diff_back <= current_time <= diff_future
+            a = diff_back <= current_time <= diff_future
+            print(a, diff_back, current_time, diff_future)
+            return a
         return True
     return True
 
@@ -146,6 +148,8 @@ async def run_once(config_path: Path, *, skip_time_check: bool = False, skip_sta
     config = read_config(config_path)
     current_time = int(datetime.utcnow().timestamp())
     euphie_client = get_client(config.client)
+    logger.info("Logging in to client...")
+    await euphie_client.login()
 
     logger.info("Current time: %s", pendulum.now(tz="Asia/Tokyo").to_day_datetime_string())
     configure_series: List[SeriesSeason] = []
@@ -226,7 +230,7 @@ if __name__ == "__main__":
     skip_time_check = bool(args.skip_time_check)
     skip_start_check = bool(args.skip_start_check)
 
-    logger.info("Starting ArcNCiel/EuphieRR v0.6.2...")
+    logger.info("Starting ArcNCiel/EuphieRR v0.7.0...")
     if LOCK_FILE.exists():
         logger.warning("Lock file exists, exiting")
 

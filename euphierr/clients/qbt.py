@@ -73,6 +73,10 @@ class EuphieQbtClient(EuphieClient):
     def client(self) -> qbtapi.Client:
         return self._client
 
+    async def login(self):
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self._client.auth_log_in, self._config.username, self._config.password)
+
     async def _add_torrent(self, torrent_url: str, torrent_bytes: bytes):
         from qbittorrentapi.exceptions import UnsupportedMediaType415Error
 

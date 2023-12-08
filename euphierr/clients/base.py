@@ -67,3 +67,6 @@ class EuphieClient:
                     return torrent_data, torrent.infohash
                 except Exception:
                     raise ArcNCielInvalidTorrentError(f"Failed to read torrent: {torrent_url}")
+
+    async def login(self):
+        raise NotImplementedError
